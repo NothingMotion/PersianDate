@@ -15,8 +15,11 @@ func (p *PersianDate) Jalali() string {
 }
 func (p *PersianDate) IsLeapYear(year int) bool {
 	yearsInCycle := year % 33
-	if yearsInCycle == 1 || yearsInCycle == 5 || yearsInCycle == 9 || yearsInCycle == 13 || yearsInCycle == 17 || yearsInCycle == 21 || yearsInCycle == 25 || yearsInCycle == 29 || yearsInCycle == 0 {
-		return true
+	remaineders := []int{1, 5, 9, 13, 17, 21, 25, 29, 0}
+	for _, remaineder := range remaineders {
+		if yearsInCycle == remaineder {
+			return true
+		}
 	}
 	return false
 }
