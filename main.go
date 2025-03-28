@@ -6,8 +6,10 @@ import (
 )
 
 type PersianDate struct {
-	FORMAT             string
-	numbersMap         map[string]string
+	FORMAT string
+
+	latinNumbers       []string
+	persianNumbers     []string
 	persianMonths      []string
 	persianShortMonths []string
 	persianDays        []string
@@ -15,20 +17,11 @@ type PersianDate struct {
 	persianSeasons     []string
 }
 
+// NewPersianDate creates a new PersianDate object
 func NewPersianDate(format string) *PersianDate {
-	numbersMap := map[string]string{
-		"0": "۰",
-		"1": "۱",
-		"2": "۲",
-		"3": "۳",
-		"4": "۴",
-		"5": "۵",
-		"6": "۶",
-		"7": "۷",
-		"8": "۸",
-		"9": "۹",
-		".": ".",
-	}
+	persianNumbers := []string{"۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"}
+
+	latinNumbers := []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"}
 
 	persianMonths := []string{"فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"}
 
@@ -40,11 +33,14 @@ func NewPersianDate(format string) *PersianDate {
 
 	persianSeasons := []string{"بهار", "تابستان", "پاییز", "زمستان"}
 
-	return &PersianDate{FORMAT: format, numbersMap: numbersMap, persianMonths: persianMonths, persianShortMonths: persianShortMonths, persianDays: persianDays, persianShortDays: persianShortDays, persianSeasons: persianSeasons}
+	return &PersianDate{FORMAT: format, persianNumbers: persianNumbers, latinNumbers: latinNumbers, persianMonths: persianMonths, persianShortMonths: persianShortMonths, persianDays: persianDays, persianShortDays: persianShortDays, persianSeasons: persianSeasons}
 }
+
 func (p *PersianDate) Jalali() string {
 	return p.FORMAT
 }
+
+// Detect wheter if given persian year is leap year (kabiseh) or not
 func (p *PersianDate) IsLeapYear(year int) bool {
 	yearsInCycle := year % 33
 	remaineders := []int{1, 5, 9, 13, 17, 21, 25, 29, 0}
@@ -55,9 +51,19 @@ func (p *PersianDate) IsLeapYear(year int) bool {
 	}
 	return false
 }
-func (p *PersianDate) ReplaceNumbers(text string) string {
-	for key, value := range p.numbersMap {
-		text = strings.ReplaceAll(text, key, value)
+
+// Converts Latin number like 1402 to Persian numbers like ۱۴۰۲
+func (p *PersianDate) ToPersianNumbers(text string) string {
+	for i, value := range p.latinNumbers {
+		text = strings.ReplaceAll(text, value, p.persianNumbers[i])
+	}
+	return text
+}
+
+// Converts Persian numbers to Latin numbers like ۱۴۰۲ to 1402
+func (p *PersianDate) ToLatinNumbers(text string) string {
+	for i, value := range p.persianNumbers {
+		text = strings.ReplaceAll(text, value, p.latinNumbers[i])
 	}
 	return text
 }
@@ -74,5 +80,6 @@ func main() {
 	fmt.Println("1409", persianDate.IsLeapYear(1409))
 	fmt.Println("1410", persianDate.IsLeapYear(1410))
 
-	fmt.Println(persianDate.ReplaceNumbers("1402/01/01"))
+	fmt.Println(persianDate.ToPersianNumbers("1402/01/01 salam"))
+	fmt.Println(persianDate.ToLatinNumbers("۱۴۰۲/۰۱/۰۱ سلام"))
 }
