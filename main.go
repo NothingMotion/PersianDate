@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type PersianDate struct {
 	FORMAT             string
@@ -52,6 +55,12 @@ func (p *PersianDate) IsLeapYear(year int) bool {
 	}
 	return false
 }
+func (p *PersianDate) ReplaceNumbers(text string) string {
+	for key, value := range p.numbersMap {
+		text = strings.ReplaceAll(text, key, value)
+	}
+	return text
+}
 func main() {
 	persianDate := NewPersianDate("%d/%m/%Y")
 
@@ -64,4 +73,6 @@ func main() {
 	fmt.Println("1408", persianDate.IsLeapYear(1408))
 	fmt.Println("1409", persianDate.IsLeapYear(1409))
 	fmt.Println("1410", persianDate.IsLeapYear(1410))
+
+	fmt.Println(persianDate.ReplaceNumbers("1402/01/01"))
 }
