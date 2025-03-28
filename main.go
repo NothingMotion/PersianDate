@@ -3,12 +3,41 @@ package main
 import "fmt"
 
 type PersianDate struct {
-	FORMAT string
+	FORMAT             string
+	numbersMap         map[string]string
+	persianMonths      []string
+	persianShortMonths []string
+	persianDays        []string
+	persianShortDays   []string
+	persianSeasons     []string
 }
 
 func NewPersianDate(format string) *PersianDate {
+	numbersMap := map[string]string{
+		"0": "۰",
+		"1": "۱",
+		"2": "۲",
+		"3": "۳",
+		"4": "۴",
+		"5": "۵",
+		"6": "۶",
+		"7": "۷",
+		"8": "۸",
+		"9": "۹",
+		".": ".",
+	}
 
-	return &PersianDate{FORMAT: format}
+	persianMonths := []string{"فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"}
+
+	persianShortMonths := []string{"فر", "ار", "خر", "تی‍", "مر", "شه‍", "مه‍", "آب‍", "آذ", "دی", "به‍", "اس‍"}
+
+	persianDays := []string{"یکشنبه", "دوشنبه", "سه شنبه", "چهارشنبه", "پنج شنبه", "جمعه", "شنبه"}
+
+	persianShortDays := []string{"ی", "د", "س", "چ", "پ", "ج", "ش"}
+
+	persianSeasons := []string{"بهار", "تابستان", "پاییز", "زمستان"}
+
+	return &PersianDate{FORMAT: format, numbersMap: numbersMap, persianMonths: persianMonths, persianShortMonths: persianShortMonths, persianDays: persianDays, persianShortDays: persianShortDays, persianSeasons: persianSeasons}
 }
 func (p *PersianDate) Jalali() string {
 	return p.FORMAT
