@@ -42,14 +42,43 @@ func (p *PersianDate) Jalali() string {
 
 // Detect wheter if given persian year is leap year (kabiseh) or not
 func (p *PersianDate) IsLeapYear(year int) bool {
+	if year <= 0 {
+		year = year - 1
+	}
 	yearsInCycle := year % 33
-	remaineders := []int{1, 5, 9, 13, 17, 21, 25, 29, 0}
+	remaineders := []int{1, 5, 9, 13, 17, 22, 26, 30}
 	for _, remaineder := range remaineders {
 		if yearsInCycle == remaineder {
 			return true
 		}
 	}
 	return false
+}
+
+func (p *PersianDate) IsLeapYearGregorian(year int) bool {
+	if year <= 0 {
+		year = year - 1
+	}
+	if year%4 == 0 && year%100 != 0 || year%400 == 0 {
+		return true
+	}
+	return false
+}
+func (p *PersianDate) JalaliMonthLength(jy, jm int) int {
+	if jm <= 6 {
+		return 31
+	}
+	if jm > 6 && jm <= 11 {
+		return 30
+	}
+	if jm == 12 {
+		if p.IsLeapYear(jy) {
+			return 30
+		}
+		return 29
+	}
+	return 31
+
 }
 
 // Converts Latin number like 1402 to Persian numbers like ۱۴۰۲
@@ -68,18 +97,20 @@ func (p *PersianDate) ToLatinNumbers(text string) string {
 	return text
 }
 func main() {
-	persianDate := NewPersianDate("%d/%m/%Y")
+	pd := NewPersianDate("%d/%m/%Y")
 
-	fmt.Println("1402", persianDate.IsLeapYear(1402))
-	fmt.Println("1403", persianDate.IsLeapYear(1403))
-	fmt.Println("1404", persianDate.IsLeapYear(1404))
-	fmt.Println("1405", persianDate.IsLeapYear(1405))
-	fmt.Println("1406", persianDate.IsLeapYear(1406))
-	fmt.Println("1407", persianDate.IsLeapYear(1407))
-	fmt.Println("1408", persianDate.IsLeapYear(1408))
-	fmt.Println("1409", persianDate.IsLeapYear(1409))
-	fmt.Println("1410", persianDate.IsLeapYear(1410))
+	fmt.Println("-61", pd.IsLeapYear(-61))
+	fmt.Println("3177", pd.IsLeapYear(3177))
+	fmt.Println("1402", pd.IsLeapYear(1402))
+	fmt.Println("1403", pd.IsLeapYear(1403))
+	fmt.Println("1404", pd.IsLeapYear(1404))
+	fmt.Println("1405", pd.IsLeapYear(1405))
+	fmt.Println("1406", pd.IsLeapYear(1406))
+	fmt.Println("1407", pd.IsLeapYear(1407))
+	fmt.Println("1408", pd.IsLeapYear(1408))
+	fmt.Println("1409", pd.IsLeapYear(1409))
+	fmt.Println("1410", pd.IsLeapYear(1410))
 
-	fmt.Println(persianDate.ToPersianNumbers("1402/01/01 salam"))
-	fmt.Println(persianDate.ToLatinNumbers("۱۴۰۲/۰۱/۰۱ سلام"))
+	fmt.Println(pd.ToPersianNumbers("1402/01/01 salam"))
+	fmt.Println(pd.ToLatinNumbers("۱۴۰۲/۰۱/۰۱ سلام"))
 }

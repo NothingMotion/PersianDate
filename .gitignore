@@ -4,3 +4,4 @@ go.sum
 *.out
 tmp
 .DS_Store
+.idea
