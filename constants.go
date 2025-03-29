@@ -1,4 +1,4 @@
-package persiandate_go
+package persiandateconvertergo
 
 var PersianNumbers = []string{"۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"}
 

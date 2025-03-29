@@ -1,4 +1,4 @@
-package persiandate_go_test
+package persiandateconvertergo_test
 
 import (
 	"testing"
