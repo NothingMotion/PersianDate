@@ -19,6 +19,8 @@ type PersianDate struct {
 	persianDays        []string
 	persianShortDays   []string
 	persianSeasons     []string
+
+	currentDate JalaliDate
 }
 
 type DateResponse struct {
@@ -121,23 +123,26 @@ func (p *PersianDate) FromTimeFull(t time.Time) PersianDateResponse {
 
 	return response
 }
-func (p *PersianDate) FromTime(t time.Time) JalaliDate {
+func (p *PersianDate) FromTime(t time.Time) *PersianDate {
 	year, month, day := t.Date()
 
-	return p.julianDayToJalali(
+	p.currentDate = p.julianDayToJalali(
 		p.gregorianToJulianDay(year,
 			int(month), // in case if month is 0, it will be 1
 			day,
 		),
 	)
+	return p
 }
 
-func (p *PersianDate) Now() JalaliDate {
+func (p *PersianDate) Now() *PersianDate {
 	loc, err := time.LoadLocation("Asia/Tehran")
 	if err != nil {
 		return p.FromTime(time.Now())
+
 	}
 	return p.FromTime(time.Now().In(loc))
+
 }
 
 func (p *PersianDate) NowFull() PersianDateResponse {
@@ -509,15 +514,17 @@ func (p *PersianDate) Format(jDate JalaliDate, toPersian ...interface{}) string 
 }
 
 // AddDaysToJalali adds days to a Jalali date and returns the new date
-func (p *PersianDate) AddDaysTo(jDate JalaliDate, days int) JalaliDate {
+func (p *PersianDate) AddDaysTo(jDate JalaliDate, days int) *PersianDate {
 	timeObject := p.ToTime(jDate.Year, jDate.Month, jDate.Day, 0, 0, 0, 0)
 	timeObject = timeObject.AddDate(0, 0, days)
 	return p.FromTime(timeObject)
+
 }
 
 // SubtractDaysFromJalali subtracts days from a Jalali date and returns the new date
-func (p *PersianDate) SubtractDaysFrom(jDate JalaliDate, days int) JalaliDate {
-	return p.AddDaysTo(jDate, -days)
+func (p *PersianDate) SubtractDaysFrom(jDate JalaliDate, days int) *PersianDate {
+	p.AddDaysTo(jDate, -days)
+	return p
 }
 
 // ParseJalaliDateString parses a string in format YYYY-MM-DD to a Jalali date
@@ -597,15 +604,18 @@ func (p *PersianDate) GetYearDay(jDate JalaliDate) int {
 	return dayOfYear
 }
 func (p *PersianDate) GetYear() int {
-	return p.Now().Year
+
+	return p.Now().Date().Year
 }
 
 func (p *PersianDate) GetMonth() int {
-	return p.Now().Month
+
+	return p.Now().Date().Month
 }
 
 func (p *PersianDate) GetDay() int {
-	return p.Now().Day
+
+	return p.Now().Date().Day
 }
 
 func (p *PersianDate) GetHour() int {
@@ -624,8 +634,8 @@ func (p *PersianDate) Clock() (int, int, int) {
 
 	return p.GetHour(), p.GetMinute(), p.GetSecond()
 }
-func (p *PersianDate) Date() (int, int, int) {
-	return p.GetYear(), p.GetMonth(), p.GetDay()
+func (p *PersianDate) Date() JalaliDate {
+	return p.currentDate
 }
 
 func (p *PersianDate) Time() (int, int, int) {
