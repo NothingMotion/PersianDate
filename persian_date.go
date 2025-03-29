@@ -1,4 +1,4 @@
-package persiandateconvertergo
+package persiandate
 
 import (
 	"errors"
