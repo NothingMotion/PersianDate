@@ -254,3 +254,22 @@ func TestDateParsing(t *testing.T) {
 		t.Errorf("ParseJalaaliDateString(%s) should return error for invalid format", invalidFormatStr)
 	}
 }
+
+func TestJalaliWeek(t *testing.T) {
+	pd := persiandate.NewPersianDate("")
+
+	jalaliWeek := pd.JalaaliWeek(1404, 1, 9)
+	for key, week := range jalaliWeek {
+		if key == "saturday" {
+			if week.Date.Year != 1404 || week.Date.Month != 1 || week.Date.Day != 9 {
+				t.Errorf("JalaaliWeek(1404, 1, 9) = %v %v, expected 1404-01-09", key, week)
+			}
+		}
+		if key == "friday" {
+			if week.Date.Year != 1404 || week.Date.Month != 1 || week.Date.Day != 15 {
+				t.Errorf("JalaaliWeek(1404, 1, 9) = %v %v, expected 1404-01-15", key, week)
+			}
+		}
+		t.Logf("jalaliWeek: %v %v", key, week)
+	}
+}
