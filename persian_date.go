@@ -199,10 +199,10 @@ func (p *PersianDate) jalCal(jy int, withoutLeap bool) jalCalReturn {
 	jp := breaks[0]
 
 	if jy < jp || jy >= breaks[bl-1] {
-		panic(errors.New("invalid Jalaali year " + fmt.Sprintf("%d", jy)))
+		panic(errors.New("invalid Jalali year " + fmt.Sprintf("%d", jy)))
 	}
 
-	// Find the limiting years for the Jalaali year jy.
+	// Find the limiting years for the Jalali year jy.
 	var jump, jm, i int
 	for i = 1; i < bl; i++ {
 		jm = breaks[i]
@@ -216,7 +216,7 @@ func (p *PersianDate) jalCal(jy int, withoutLeap bool) jalCalReturn {
 	n := jy - jp
 
 	// Find the number of leap years from AD 621 to the beginning
-	// of the current Jalaali year in the Persian calendar.
+	// of the current Jalali year in the Persian calendar.
 	leapJ = leapJ + p.div(n, 33)*8 + p.div(p.mod(n, 33)+3, 4)
 	if p.mod(jump, 33) == 4 && jump-n == 4 {
 		leapJ += 1
@@ -247,7 +247,7 @@ func (p *PersianDate) jalCal(jy int, withoutLeap bool) jalCalReturn {
 }
 func (p *PersianDate) jalaliToJulianDay(jy, jm, jd int) int {
 	if !p.isValidJalaliDate(JalaliDate{Date: Date{Year: jy, Month: jm, Day: jd}}) {
-		panic(errors.New("invalid Jalaali date"))
+		panic(errors.New("invalid Jalali date"))
 	}
 	r := p.jalCal(jy, true)
 	return p.gregorianToJulianDay(r.gy, 3, r.march) + (jm-1)*31 - p.div(jm, 7)*(jm-7) + jd - 1
@@ -282,7 +282,7 @@ func (p *PersianDate) julianDayToJalali(jdn int) JalaliDate {
 			k -= 186
 		}
 	} else {
-		// Previous Jalaali year.
+		// Previous Jalali year.
 		jy -= 1
 		k += 179
 		if r.leap == 1 {
@@ -341,27 +341,27 @@ func ToLatinNumbers(text string) string {
 	return text
 }
 
-// ToJalaali converts a Gregorian date to Jalaali
-func (p *PersianDate) ToJalaali(gy, gm, gd int) JalaliDate {
+// ToJalali converts a Gregorian date to Jalali
+func (p *PersianDate) ToJalali(gy, gm, gd int) JalaliDate {
 	// If gy is a time.Time object, extract the date components
 	return p.julianDayToJalali(p.gregorianToJulianDay(gy, gm, gd))
 }
 
-// ToGregorian converts a Jalaali date to Gregorian
+// ToGregorian converts a Jalali date to Gregorian
 func (p *PersianDate) ToGregorian(jy, jm, jd int) GregorianDate {
 	return p.julianDayToGregorian(p.jalaliToJulianDay(jy, jm, jd))
 }
 
-// JalaaliWeek returns Saturday and Friday day of current week (week starts on Saturday)
-func (p *PersianDate) JalaaliWeek(jy, jm, jd int) map[string]JalaliDate {
-	// Create a time.Time object from Jalaali date to get day of week
+// JalaliWeek returns Saturday and Friday day of current week (week starts on Saturday)
+func (p *PersianDate) JalaliWeek(jy, jm, jd int) map[string]JalaliDate {
+	// Create a time.Time object from Jalali date to get day of week
 	gDate := p.ToGregorian(jy, jm, jd)
 	t := time.Date(gDate.Year, time.Month(gDate.Month), gDate.Day, 0, 0, 0, 0, time.Local)
 
 	// Get day of week (0 = Sunday, 6 = Saturday)
 	dayOfWeek := int(t.Weekday())
 
-	// Calculate difference to Saturday (start of week in Jalaali calendar)
+	// Calculate difference to Saturday (start of week in Jalali calendar)
 	// If it's Saturday (6), difference is 0
 	// Otherwise, we need to go back (dayOfWeek + 1) days
 	startDayDifference := 0
@@ -383,8 +383,8 @@ func (p *PersianDate) JalaaliWeek(jy, jm, jd int) map[string]JalaliDate {
 	}
 }
 
-// JalaaliToTimeObject converts Jalaali calendar dates to time.Time object
-func (p *PersianDate) JalaaliToTimeObject(jy, jm, jd, h, m, s, ms int) time.Time {
+// JalaliToTimeObject converts Jalali calendar dates to time.Time object
+func (p *PersianDate) JalaliToTimeObject(jy, jm, jd, h, m, s, ms int) time.Time {
 	GregorianDate := p.ToGregorian(jy, jm, jd)
 
 	return time.Date(
@@ -396,8 +396,8 @@ func (p *PersianDate) JalaaliToTimeObject(jy, jm, jd, h, m, s, ms int) time.Time
 	)
 }
 
-// FormatJalaaliDate formats a Jalaali date according to the format string
-func (p *PersianDate) FormatJalaaliDate(jDate JalaliDate) string {
+// FormatJalaliDate formats a Jalali date according to the format string
+func (p *PersianDate) FormatJalaliDate(jDate JalaliDate) string {
 	format := p.FORMAT
 
 	// Replace year
@@ -412,20 +412,20 @@ func (p *PersianDate) FormatJalaaliDate(jDate JalaliDate) string {
 	return format
 }
 
-// AddDaysToJalaali adds days to a Jalaali date and returns the new date
-func (p *PersianDate) AddDaysToJalaali(jDate JalaliDate, days int) JalaliDate {
-	timeObject := p.JalaaliToTimeObject(jDate.Year, jDate.Month, jDate.Day, 0, 0, 0, 0)
+// AddDaysToJalali adds days to a Jalali date and returns the new date
+func (p *PersianDate) AddDaysToJalali(jDate JalaliDate, days int) JalaliDate {
+	timeObject := p.JalaliToTimeObject(jDate.Year, jDate.Month, jDate.Day, 0, 0, 0, 0)
 	timeObject = timeObject.AddDate(0, 0, days)
 	return p.Jalali(timeObject)
 }
 
-// SubtractDaysFromJalaali subtracts days from a Jalaali date and returns the new date
-func (p *PersianDate) SubtractDaysFromJalaali(jDate JalaliDate, days int) JalaliDate {
-	return p.AddDaysToJalaali(jDate, -days)
+// SubtractDaysFromJalali subtracts days from a Jalali date and returns the new date
+func (p *PersianDate) SubtractDaysFromJalali(jDate JalaliDate, days int) JalaliDate {
+	return p.AddDaysToJalali(jDate, -days)
 }
 
-// ParseJalaaliDateString parses a string in format YYYY-MM-DD to a Jalaali date
-func (p *PersianDate) ParseJalaaliDateString(dateStr string) (JalaliDate, error) {
+// ParseJalaliDateString parses a string in format YYYY-MM-DD to a Jalali date
+func (p *PersianDate) ParseJalaliDateString(dateStr string) (JalaliDate, error) {
 	parts := strings.Split(dateStr, "-")
 	if len(parts) != 3 {
 		return JalaliDate{}, errors.New("invalid date format, expected YYYY-MM-DD")
@@ -453,7 +453,7 @@ func (p *PersianDate) ParseJalaaliDateString(dateStr string) (JalaliDate, error)
 	return JalaliDate{Date: Date{Year: year, Month: month, Day: day}}, nil
 }
 
-// DaysBetweenJalaaliDates calculates the number of days between two Jalaali dates
+// DaysBetweenJalaliDates calculates the number of days between two Jalali dates
 func (p *PersianDate) DifferenceJalali(start, end JalaliDate) int {
 	startJDN := p.jalaliToJulianDay(start.Year, start.Month, start.Day)
 	endJDN := p.jalaliToJulianDay(end.Year, end.Month, end.Day)

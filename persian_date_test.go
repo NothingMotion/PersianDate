@@ -190,31 +190,31 @@ func TestDateArithmetic(t *testing.T) {
 	baseDate := pd.Jalali(time.Date(2023, 9, 6, 0, 0, 0, 0, time.UTC)) // 1402-06-15
 	t.Logf("baseDate: %v", baseDate)
 	// Test adding days
-	addedDate := pd.AddDaysToJalaali(baseDate, 10)
+	addedDate := pd.AddDaysToJalali(baseDate, 10)
 	if addedDate.Date.Year != 1402 || addedDate.Date.Month != 6 || addedDate.Date.Day != 25 {
-		t.Errorf("AddDaysToJalaali(1402-06-15, 10) = %d-%02d-%02d, expected 1402-06-25",
+		t.Errorf("AddDaysToJalali(1402-06-15, 10) = %d-%02d-%02d, expected 1402-06-25",
 			addedDate.Date.Year, addedDate.Date.Month, addedDate.Date.Day)
 	}
 
 	// Test adding days crossing month boundary
-	addedDate = pd.AddDaysToJalaali(baseDate, 20)
+	addedDate = pd.AddDaysToJalali(baseDate, 20)
 	if addedDate.Date.Year != 1402 || addedDate.Date.Month != 7 || addedDate.Date.Day != 4 {
-		t.Errorf("AddDaysToJalaali(1402-06-15, 20) = %d-%02d-%02d, expected 1402-07-05",
+		t.Errorf("AddDaysToJalali(1402-06-15, 20) = %d-%02d-%02d, expected 1402-07-05",
 			addedDate.Date.Year, addedDate.Date.Month, addedDate.Date.Day)
 	}
 
 	// Test adding days crossing year boundary
 	yearEndDate := pd.Jalali(time.Date(2024, 3, 15, 0, 0, 0, 0, time.UTC)) // 1402-12-25
-	addedDate = pd.AddDaysToJalaali(yearEndDate, 10)
+	addedDate = pd.AddDaysToJalali(yearEndDate, 10)
 	if addedDate.Date.Year != 1403 || addedDate.Date.Month != 1 || addedDate.Date.Day != 6 {
-		t.Errorf("AddDaysToJalaali(1402-12-25, 10) = %d-%02d-%02d, expected 1403-01-05",
+		t.Errorf("AddDaysToJalali(1402-12-25, 10) = %d-%02d-%02d, expected 1403-01-05",
 			addedDate.Date.Year, addedDate.Date.Month, addedDate.Date.Day)
 	}
 
 	// Test subtracting days
-	subtractedDate := pd.SubtractDaysFromJalaali(baseDate, 10)
+	subtractedDate := pd.SubtractDaysFromJalali(baseDate, 10)
 	if subtractedDate.Date.Year != 1402 || subtractedDate.Date.Month != 6 || subtractedDate.Date.Day != 5 {
-		t.Errorf("SubtractDaysFromJalaali(1402-06-15, 10) = %d-%02d-%02d, expected 1402-06-05",
+		t.Errorf("SubtractDaysFromJalali(1402-06-15, 10) = %d-%02d-%02d, expected 1402-06-05",
 			subtractedDate.Date.Year, subtractedDate.Date.Month, subtractedDate.Date.Day)
 	}
 
@@ -225,7 +225,7 @@ func TestDateArithmetic(t *testing.T) {
 	t.Logf("endDate: %v", endDate)
 	daysBetween := pd.DifferenceJalali(startDate, endDate)
 	if daysBetween != 31 {
-		t.Errorf("DaysBetweenJalaaliDates(1402-06-01, 1402-07-01) = %d, expected 30", daysBetween)
+		t.Errorf("DaysBetweenJalaliDates(1402-06-01, 1402-07-01) = %d, expected 30", daysBetween)
 	}
 }
 
@@ -233,41 +233,41 @@ func TestDateParsing(t *testing.T) {
 	pd := persiandate.NewPersianDate("")
 
 	validDateStr := "1402-06-15"
-	date, err := pd.ParseJalaaliDateString(validDateStr)
+	date, err := pd.ParseJalaliDateString(validDateStr)
 	if err != nil {
-		t.Errorf("ParseJalaaliDateString(%s) returned error: %v", validDateStr, err)
+		t.Errorf("ParseJalaliDateString(%s) returned error: %v", validDateStr, err)
 	}
 	if date.Date.Year != 1402 || date.Date.Month != 6 || date.Date.Day != 15 {
-		t.Errorf("ParseJalaaliDateString(%s) = %d-%02d-%02d, expected 1402-06-15",
+		t.Errorf("ParseJalaliDateString(%s) = %d-%02d-%02d, expected 1402-06-15",
 			validDateStr, date.Date.Year, date.Date.Month, date.Date.Day)
 	}
 
 	invalidDateStr := "1402-13-15" // Invalid month
-	_, err = pd.ParseJalaaliDateString(invalidDateStr)
+	_, err = pd.ParseJalaliDateString(invalidDateStr)
 	if err == nil {
-		t.Errorf("ParseJalaaliDateString(%s) should return error for invalid date", invalidDateStr)
+		t.Errorf("ParseJalaliDateString(%s) should return error for invalid date", invalidDateStr)
 	}
 
 	invalidFormatStr := "1402/06/15" // Wrong separator
-	_, err = pd.ParseJalaaliDateString(invalidFormatStr)
+	_, err = pd.ParseJalaliDateString(invalidFormatStr)
 	if err == nil {
-		t.Errorf("ParseJalaaliDateString(%s) should return error for invalid format", invalidFormatStr)
+		t.Errorf("ParseJalaliDateString(%s) should return error for invalid format", invalidFormatStr)
 	}
 }
 
 func TestJalaliWeek(t *testing.T) {
 	pd := persiandate.NewPersianDate("")
 
-	jalaliWeek := pd.JalaaliWeek(1404, 1, 9)
+	jalaliWeek := pd.JalaliWeek(1404, 1, 9)
 	for key, week := range jalaliWeek {
 		if key == "saturday" {
 			if week.Date.Year != 1404 || week.Date.Month != 1 || week.Date.Day != 9 {
-				t.Errorf("JalaaliWeek(1404, 1, 9) = %v %v, expected 1404-01-09", key, week)
+				t.Errorf("JalaliWeek(1404, 1, 9) = %v %v, expected 1404-01-09", key, week)
 			}
 		}
 		if key == "friday" {
 			if week.Date.Year != 1404 || week.Date.Month != 1 || week.Date.Day != 15 {
-				t.Errorf("JalaaliWeek(1404, 1, 9) = %v %v, expected 1404-01-15", key, week)
+				t.Errorf("JalaliWeek(1404, 1, 9) = %v %v, expected 1404-01-15", key, week)
 			}
 		}
 		t.Logf("jalaliWeek: %v %v", key, week)
