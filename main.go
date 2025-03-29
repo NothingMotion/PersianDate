@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 type PersianDate struct {
@@ -15,6 +16,11 @@ type PersianDate struct {
 	persianDays        []string
 	persianShortDays   []string
 	persianSeasons     []string
+}
+type PersianDateResponse struct {
+	Year  int
+	Month int
+	Day   int
 }
 
 // NewPersianDate creates a new PersianDate object
@@ -36,12 +42,23 @@ func NewPersianDate(format string) *PersianDate {
 	return &PersianDate{FORMAT: format, persianNumbers: persianNumbers, latinNumbers: latinNumbers, persianMonths: persianMonths, persianShortMonths: persianShortMonths, persianDays: persianDays, persianShortDays: persianShortDays, persianSeasons: persianSeasons}
 }
 
-func (p *PersianDate) Jalali() string {
-	return p.FORMAT
+func (p *PersianDate) Jalali(t time.Time) PersianDateResponse {
+	year, month, day := t.Date()
+
+	response := PersianDateResponse{
+		Year:  year,
+		Month: int(month),
+		Day:   day,
+	}
+
+	return response
+}
+func (p *PersianDate) IsValidJalaliDate(year, month, day int) bool {
+	return year >= -61 && year <= 3177 && month >= 1 && month <= 12 && day >= 1 && day <= p.JalaliMonthLength(year, month)
 }
 
 // Detect wheter if given persian year is leap year (kabiseh) or not
-func (p *PersianDate) IsLeapYear(year int) bool {
+func (p *PersianDate) IsLeapYearJalali(year int) bool {
 	if year <= 0 {
 		year = year - 1
 	}
@@ -72,12 +89,40 @@ func (p *PersianDate) JalaliMonthLength(jy, jm int) int {
 		return 30
 	}
 	if jm == 12 {
-		if p.IsLeapYear(jy) {
+		if p.IsLeapYearJalali(jy) {
 			return 30
 		}
 		return 29
 	}
-	return 31
+	return 0
+
+}
+func (p *PersianDate) jalaliToJulianDay(jy, jm, jd int) int {
+
+	JDN := 1948440 + (jy-1)*365 + (jy-1)/4 - (jy-1)/100 + (jy-1)/400 + (jm-1)*31 - (jm-1)/8 + jd
+	return JDN
+}
+
+func (p *PersianDate) gregorianToJulianDay(gy, gm, gd int) int {
+	//	days := ((((gm - 8) / 6) + 100100) * 1461) / 4 + ()
+	ut := 0
+	JDN := float64(367*gy-(7*(gy+(gm+9)/12))/4+(275*gm)/9+gd) + float64(1721013.5) + float64(ut)/24
+	return int(JDN)
+}
+func (p *PersianDate) julianDayToJalali(jdn int) (int, int, int) {
+	return 0, 0, 0
+}
+
+func (p *PersianDate) julianDayToGregorian(jdn int) (int, int, int) {
+
+	j := 4*jdn + 139361631
+	j = j + (j+183187720)/146097*3/4*4 - 3908
+	i := (j%1461)/4*5 + 308
+	gd := (i%153)/5 + 1
+	gm := (i/153)%12 + 1
+	gy := j/1461 - 100100 + (8-gm)/6
+
+	return gy, gm, gd
 
 }
 
@@ -99,18 +144,9 @@ func (p *PersianDate) ToLatinNumbers(text string) string {
 func main() {
 	pd := NewPersianDate("%d/%m/%Y")
 
-	fmt.Println("-61", pd.IsLeapYear(-61))
-	fmt.Println("3177", pd.IsLeapYear(3177))
-	fmt.Println("1402", pd.IsLeapYear(1402))
-	fmt.Println("1403", pd.IsLeapYear(1403))
-	fmt.Println("1404", pd.IsLeapYear(1404))
-	fmt.Println("1405", pd.IsLeapYear(1405))
-	fmt.Println("1406", pd.IsLeapYear(1406))
-	fmt.Println("1407", pd.IsLeapYear(1407))
-	fmt.Println("1408", pd.IsLeapYear(1408))
-	fmt.Println("1409", pd.IsLeapYear(1409))
-	fmt.Println("1410", pd.IsLeapYear(1410))
-
+	jdn := pd.gregorianToJulianDay(2025, 3, 29)
+	fmt.Println(jdn)
+	fmt.Println(pd.julianDayToGregorian(jdn))
 	fmt.Println(pd.ToPersianNumbers("1402/01/01 salam"))
 	fmt.Println(pd.ToLatinNumbers("۱۴۰۲/۰۱/۰۱ سلام"))
 }
