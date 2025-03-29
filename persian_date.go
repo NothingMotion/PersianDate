@@ -418,15 +418,18 @@ func (p *PersianDate) Format(jDate JalaliDate, toPersian ...interface{}) string 
 	t := p.ToTime(jDate.Year, jDate.Month, jDate.Day, 0, 0, 0, 0)
 
 	var convertNumbers bool
-	switch toPersian[0].(type) {
 
-	case bool:
-		if toPersian[0] == true {
+	if len(toPersian) != 0 {
 
-			convertNumbers = true
+		switch toPersian[0].(type) {
+
+		case bool:
+			if toPersian[0] == true {
+
+				convertNumbers = true
+			}
 		}
 	}
-
 	var aText string
 	var AText string
 	var kabisehText string
@@ -446,7 +449,7 @@ func (p *PersianDate) Format(jDate JalaliDate, toPersian ...interface{}) string 
 	}
 
 	// Replace year
-	format = strings.ReplaceAll(format, "YY", fmt.Sprintf("%02d", jDate.Year))
+	// format = strings.ReplaceAll(format, "YY", fmt.Sprintf("%02d", jDate.Year))
 	format = strings.ReplaceAll(format, "YYYY", fmt.Sprintf("%04d", jDate.Year))
 
 	// Replace Month
