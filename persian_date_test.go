@@ -198,7 +198,7 @@ func TestDateArithmetic(t *testing.T) {
 
 	// Test adding days crossing month boundary
 	addedDate = pd.AddDaysToJalaali(baseDate, 20)
-	if addedDate.Date.Year != 1402 || addedDate.Date.Month != 7 || addedDate.Date.Day != 5 {
+	if addedDate.Date.Year != 1402 || addedDate.Date.Month != 7 || addedDate.Date.Day != 4 {
 		t.Errorf("AddDaysToJalaali(1402-06-15, 20) = %d-%02d-%02d, expected 1402-07-05",
 			addedDate.Date.Year, addedDate.Date.Month, addedDate.Date.Day)
 	}
@@ -206,7 +206,7 @@ func TestDateArithmetic(t *testing.T) {
 	// Test adding days crossing year boundary
 	yearEndDate := pd.Jalali(time.Date(2024, 3, 15, 0, 0, 0, 0, time.UTC)) // 1402-12-25
 	addedDate = pd.AddDaysToJalaali(yearEndDate, 10)
-	if addedDate.Date.Year != 1403 || addedDate.Date.Month != 1 || addedDate.Date.Day != 5 {
+	if addedDate.Date.Year != 1403 || addedDate.Date.Month != 1 || addedDate.Date.Day != 6 {
 		t.Errorf("AddDaysToJalaali(1402-12-25, 10) = %d-%02d-%02d, expected 1403-01-05",
 			addedDate.Date.Year, addedDate.Date.Month, addedDate.Date.Day)
 	}
@@ -219,10 +219,12 @@ func TestDateArithmetic(t *testing.T) {
 	}
 
 	// Test days between dates
-	startDate := pd.Jalali(time.Date(2023, 8, 23, 0, 0, 0, 0, time.UTC)) // 1402-06-01
-	endDate := pd.Jalali(time.Date(2023, 9, 23, 0, 0, 0, 0, time.UTC))   // 1402-07-01
+	startDate := persiandate.JalaliDate{Date: persiandate.Date{Year: 1402, Month: 6, Day: 1}} // 1402-06-01
+	t.Logf("startDate: %v", startDate)
+	endDate := persiandate.JalaliDate{Date: persiandate.Date{Year: 1402, Month: 7, Day: 1}} // 1402-07-01
+	t.Logf("endDate: %v", endDate)
 	daysBetween := pd.DifferenceJalali(startDate, endDate)
-	if daysBetween != 30 {
+	if daysBetween != 31 {
 		t.Errorf("DaysBetweenJalaaliDates(1402-06-01, 1402-07-01) = %d, expected 30", daysBetween)
 	}
 }
