@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -82,9 +83,19 @@ type jalCalReturn struct {
 	march int
 }
 
-// NewPersianDate creates a new PersianDate object
-func NewPersianDate(format string) *PersianDate {
+var once sync.Once
+var instance *PersianDate
 
+// Instance creates a new PersianDate object which is a singleton
+func Instance(format string) *PersianDate {
+	once.Do(func() {
+		instance = &PersianDate{FORMAT: format, persianNumbers: PersianNumbers, latinNumbers: LatinNumbers, persianMonths: PersianMonths, persianShortMonths: PersianShortMonths, persianDays: PersianDays, persianShortDays: PersianShortDays, persianSeasons: PersianSeasons}
+	})
+	return instance
+}
+
+// NewPersianDate creates a new PersianDate object which is not a singleton
+func NewPersianDate(format string) *PersianDate {
 	return &PersianDate{FORMAT: format, persianNumbers: PersianNumbers, latinNumbers: LatinNumbers, persianMonths: PersianMonths, persianShortMonths: PersianShortMonths, persianDays: PersianDays, persianShortDays: PersianShortDays, persianSeasons: PersianSeasons}
 }
 
@@ -517,7 +528,7 @@ func (p *PersianDate) GetSeason(month int) string {
 
 // Example function showing how to use the package
 func main() {
-	pd := NewPersianDate("YYYY/MM/DD")
+	pd := Instance("YYYY/MM/DD")
 
 	fmt.Println(pd.JalaliFullNow())
 
