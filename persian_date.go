@@ -20,7 +20,8 @@ type PersianDate struct {
 	persianShortDays   []string
 	persianSeasons     []string
 
-	currentDate JalaliDate
+	currentDate     JalaliDate
+	currentDateFull PersianDateResponse
 }
 
 type DateResponse struct {
