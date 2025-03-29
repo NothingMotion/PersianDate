@@ -95,11 +95,11 @@ func Instance(format string) *PersianDate {
 }
 
 // NewPersianDate creates a new PersianDate object which is not a singleton
-func NewPersianDate(format string) *PersianDate {
+func New(format string) *PersianDate {
 	return &PersianDate{FORMAT: format, persianNumbers: PersianNumbers, latinNumbers: LatinNumbers, persianMonths: PersianMonths, persianShortMonths: PersianShortMonths, persianDays: PersianDays, persianShortDays: PersianShortDays, persianSeasons: PersianSeasons}
 }
 
-func (p *PersianDate) JalaliFull(t time.Time) PersianDateResponse {
+func (p *PersianDate) FromTimeFull(t time.Time) PersianDateResponse {
 	year, month, day := t.Date()
 	d := p.julianDayToJalali(
 		p.gregorianToJulianDay(year,
@@ -121,7 +121,7 @@ func (p *PersianDate) JalaliFull(t time.Time) PersianDateResponse {
 
 	return response
 }
-func (p *PersianDate) Jalali(t time.Time) JalaliDate {
+func (p *PersianDate) FromTime(t time.Time) JalaliDate {
 	year, month, day := t.Date()
 
 	return p.julianDayToJalali(
@@ -132,12 +132,20 @@ func (p *PersianDate) Jalali(t time.Time) JalaliDate {
 	)
 }
 
-func (p *PersianDate) JalaliNow() JalaliDate {
-	return p.Jalali(time.Now())
+func (p *PersianDate) Now() JalaliDate {
+	loc, err := time.LoadLocation("Asia/Tehran")
+	if err != nil {
+		return p.FromTime(time.Now())
+	}
+	return p.FromTime(time.Now().In(loc))
 }
 
-func (p *PersianDate) JalaliFullNow() PersianDateResponse {
-	return p.JalaliFull(time.Now())
+func (p *PersianDate) NowFull() PersianDateResponse {
+	loc, err := time.LoadLocation("Asia/Tehran")
+	if err != nil {
+		return p.FromTimeFull(time.Now())
+	}
+	return p.FromTimeFull(time.Now().In(loc))
 }
 
 // Detect wheter if given persian year is leap year (kabiseh) or not
@@ -364,19 +372,15 @@ func (p *PersianDate) ToGregorian(jy, jm, jd int) GregorianDate {
 }
 
 // JalaliWeek returns Saturday and Friday day of current week (week starts on Saturday)
-func (p *PersianDate) JalaliWeek(jy, jm, jd int) map[string]JalaliDate {
-	// Create a time.Time object from Jalali date to get day of week
-	gDate := p.ToGregorian(jy, jm, jd)
-	t := time.Date(gDate.Year, time.Month(gDate.Month), gDate.Day, 0, 0, 0, 0, time.Local)
-
-	// Get day of week (0 = Sunday, 6 = Saturday)
-	dayOfWeek := int(t.Weekday())
+func (p *PersianDate) Week(jy, jm, jd int) map[string]JalaliDate {
+	// Get day of week (0 = Saturday, 6 = Friday) based on jalali date
+	dayOfWeek := p.GetWeekDay(JalaliDate{Date{Year: jy, Month: jm, Day: jd}})
 
 	// Calculate difference to Saturday (start of week in Jalali calendar)
-	// If it's Saturday (6), difference is 0
+	// If it's Saturday (0), difference is 0
 	// Otherwise, we need to go back (dayOfWeek + 1) days
 	startDayDifference := 0
-	if dayOfWeek != 6 {
+	if dayOfWeek != 0 {
 		startDayDifference = -(dayOfWeek + 1)
 	}
 	endDayDifference := 6 + startDayDifference
@@ -395,7 +399,7 @@ func (p *PersianDate) JalaliWeek(jy, jm, jd int) map[string]JalaliDate {
 }
 
 // JalaliToTimeObject converts Jalali calendar dates to time.Time object
-func (p *PersianDate) JalaliToTimeObject(jy, jm, jd, h, m, s, ms int) time.Time {
+func (p *PersianDate) ToTime(jy, jm, jd, h, m, s, ms int) time.Time {
 	GregorianDate := p.ToGregorian(jy, jm, jd)
 
 	return time.Date(
@@ -408,35 +412,113 @@ func (p *PersianDate) JalaliToTimeObject(jy, jm, jd, h, m, s, ms int) time.Time 
 }
 
 // FormatJalaliDate formats a Jalali date according to the format string
-func (p *PersianDate) FormatJalaliDate(jDate JalaliDate) string {
+func (p *PersianDate) Format(jDate JalaliDate, toPersian ...interface{}) string {
 	format := p.FORMAT
 
+	t := p.ToTime(jDate.Year, jDate.Month, jDate.Day, 0, 0, 0, 0)
+
+	var convertNumbers bool
+	switch toPersian[0].(type) {
+
+	case bool:
+		if toPersian[0] == true {
+
+			convertNumbers = true
+		}
+	}
+
+	var aText string
+	var AText string
+	var kabisehText string
+
+	if t.Hour() < 12 {
+		aText = "ق.ظ"
+		AText = "قبل از ظهر"
+	} else {
+		aText = "ب.ظ"
+		AText = "بعد از ظهر"
+	}
+
+	if p.IsLeapYearJalali(jDate.Year) {
+		kabisehText = "بله"
+	} else {
+		kabisehText = "خیر"
+	}
+
 	// Replace year
+	format = strings.ReplaceAll(format, "YY", fmt.Sprintf("%02d", jDate.Year))
 	format = strings.ReplaceAll(format, "YYYY", fmt.Sprintf("%04d", jDate.Year))
 
 	// Replace Month
 	format = strings.ReplaceAll(format, "MM", fmt.Sprintf("%02d", jDate.Month))
 
 	// Replace day
-	format = strings.ReplaceAll(format, "DD", fmt.Sprintf("%02d", jDate.Day))
+	format = strings.ReplaceAll(format, "dd", fmt.Sprintf("%02d", jDate.Day))
 
+	// Replace hour
+	format = strings.ReplaceAll(format, "HH", fmt.Sprintf("%02d", t.Hour()))
+
+	// Replace minute
+	format = strings.ReplaceAll(format, "ii", fmt.Sprintf("%02d", t.Minute()))
+
+	// Replace seconds
+	format = strings.ReplaceAll(format, "ss", fmt.Sprintf("%02d", t.Second()))
+
+	// Replace a.m. or p.m.
+	format = strings.ReplaceAll(format, "a", aText)
+	format = strings.ReplaceAll(format, "A", AText)
+
+	// Replace date
+	format = strings.ReplaceAll(format, "c", fmt.Sprintf("%d/%d/%d ،%d:%d:%d %s", jDate.Year, jDate.Month, jDate.Day, t.Hour(), t.Minute(), t.Second(), p.GetDayName(p.GetWeekDay(jDate))))
+
+	// Replace kabiseh
+	format = strings.ReplaceAll(format, "L", kabisehText)
+
+	// Replace season number
+	format = strings.ReplaceAll(format, "b", fmt.Sprintf("%d", int(float64(jDate.Month)/float64(3.1)+1)))
+
+	// Replace season
+	format = strings.ReplaceAll(format, "ff", p.GetSeason(jDate.Month))
+
+	// Replace month
+	format = strings.ReplaceAll(format, "mm", p.GetMonthName(jDate.Month))
+
+	// Replace month short
+	format = strings.ReplaceAll(format, "km", p.GetShortMonthName(jDate.Month))
+
+	// Replace month symbol
+	format = strings.ReplaceAll(format, "mb", p.GetMonthSymbol(jDate.Month))
+
+	// Replace day number
+	format = strings.ReplaceAll(format, "rh", p.GetDayName(p.GetWeekDay(jDate)))
+	format = strings.ReplaceAll(format, "l", p.GetDayName(p.GetWeekDay(jDate)))
+
+	// Replace day short
+	format = strings.ReplaceAll(format, "kh", p.GetShortDayName(p.GetWeekDay(jDate)))
+
+	// Replace day of month
+	format = strings.ReplaceAll(format, "rr", PersianMonthDays[jDate.Day-1])
+
+	if convertNumbers {
+		format = ToPersianNumbers(format)
+	}
 	return format
 }
 
 // AddDaysToJalali adds days to a Jalali date and returns the new date
-func (p *PersianDate) AddDaysToJalali(jDate JalaliDate, days int) JalaliDate {
-	timeObject := p.JalaliToTimeObject(jDate.Year, jDate.Month, jDate.Day, 0, 0, 0, 0)
+func (p *PersianDate) AddDaysTo(jDate JalaliDate, days int) JalaliDate {
+	timeObject := p.ToTime(jDate.Year, jDate.Month, jDate.Day, 0, 0, 0, 0)
 	timeObject = timeObject.AddDate(0, 0, days)
-	return p.Jalali(timeObject)
+	return p.FromTime(timeObject)
 }
 
 // SubtractDaysFromJalali subtracts days from a Jalali date and returns the new date
-func (p *PersianDate) SubtractDaysFromJalali(jDate JalaliDate, days int) JalaliDate {
-	return p.AddDaysToJalali(jDate, -days)
+func (p *PersianDate) SubtractDaysFrom(jDate JalaliDate, days int) JalaliDate {
+	return p.AddDaysTo(jDate, -days)
 }
 
 // ParseJalaliDateString parses a string in format YYYY-MM-DD to a Jalali date
-func (p *PersianDate) ParseJalaliDateString(dateStr string) (JalaliDate, error) {
+func (p *PersianDate) Parse(dateStr string) (JalaliDate, error) {
 	parts := strings.Split(dateStr, "-")
 	if len(parts) != 3 {
 		return JalaliDate{}, errors.New("invalid date format, expected YYYY-MM-DD")
@@ -465,10 +547,86 @@ func (p *PersianDate) ParseJalaliDateString(dateStr string) (JalaliDate, error) 
 }
 
 // DaysBetweenJalaliDates calculates the number of days between two Jalali dates
-func (p *PersianDate) DifferenceJalali(start, end JalaliDate) int {
+func (p *PersianDate) Difference(start, end JalaliDate) int {
 	startJDN := p.jalaliToJulianDay(start.Year, start.Month, start.Day)
 	endJDN := p.jalaliToJulianDay(end.Year, end.Month, end.Day)
 	return endJDN - startJDN
+}
+func (p *PersianDate) Until(date, end JalaliDate) int {
+	return p.Difference(date, end)
+}
+func (p *PersianDate) Since(start, date JalaliDate) int {
+	return p.Difference(start, date)
+}
+func (p *PersianDate) Equal(a, b JalaliDate) bool {
+	return a.Year == b.Year && a.Month == b.Month && a.Day == b.Day
+}
+
+func (p *PersianDate) GetWeekDay(jDate JalaliDate) int {
+	t := p.ToTime(jDate.Year, jDate.Month, jDate.Day, 0, 0, 0, 0)
+	return int((t.Weekday() + 1) % 7) // conversion to jalali days (saturday from 6 to 0 , and friday to 6)
+}
+func (p *PersianDate) GetYearDay(jDate JalaliDate) int {
+	year := jDate.Year
+	month := int(jDate.Month)
+	day := jDate.Day
+
+	dayOfYear := day
+
+	if month < 1 || month > 12 {
+
+		return 0
+	}
+	for i := 1; i < month; i++ {
+		if i <= 6 {
+			dayOfYear += 31
+		}
+		if i > 6 && i <= 11 {
+			dayOfYear += 30
+		}
+		if i == 12 {
+			if p.IsLeapYearJalali(year) {
+				dayOfYear += 30
+			}
+			dayOfYear += 29
+		}
+	}
+	return dayOfYear
+}
+func (p *PersianDate) GetYear() int {
+	return p.Now().Year
+}
+
+func (p *PersianDate) GetMonth() int {
+	return p.Now().Month
+}
+
+func (p *PersianDate) GetDay() int {
+	return p.Now().Day
+}
+
+func (p *PersianDate) GetHour() int {
+	return p.NowFull().Hour
+}
+
+func (p *PersianDate) GetMinute() int {
+	return p.NowFull().Minute
+}
+
+func (p *PersianDate) GetSecond() int {
+	return p.NowFull().Second
+}
+
+func (p *PersianDate) Clock() (int, int, int) {
+
+	return p.GetHour(), p.GetMinute(), p.GetSecond()
+}
+func (p *PersianDate) Date() (int, int, int) {
+	return p.GetYear(), p.GetMonth(), p.GetDay()
+}
+
+func (p *PersianDate) Time() (int, int, int) {
+	return p.GetHour(), p.GetMinute(), p.GetSecond()
 }
 
 // GetMonthName returns the Persian name of the Month
@@ -485,6 +643,13 @@ func (p *PersianDate) GetShortMonthName(month int) string {
 		return ""
 	}
 	return p.persianShortMonths[month-1]
+}
+
+func (p *PersianDate) GetMonthSymbol(month int) string {
+	if month < 1 || month > 12 {
+		return ""
+	}
+	return ""
 }
 
 // GetDayName returns the Persian name of the day of week
@@ -530,7 +695,7 @@ func (p *PersianDate) GetSeason(month int) string {
 func main() {
 	pd := Instance("YYYY/MM/DD")
 
-	fmt.Println(pd.JalaliFullNow())
+	fmt.Println(pd.NowFull())
 
 	fmt.Println(pd.GetSeason(5))
 

@@ -8,7 +8,7 @@ import (
 )
 
 func TestJalaliConversion(t *testing.T) {
-	pd := persiandate.NewPersianDate("YYYY/MM/DD")
+	pd := persiandate.New("YYYY/MM/DD")
 
 	tests := []struct {
 		gregorianDate time.Time
@@ -27,14 +27,14 @@ func TestJalaliConversion(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result := pd.JalaliFull(test.gregorianDate)
+		result := pd.FromTimeFull(test.gregorianDate)
 		if result.Year != test.expectedYear || result.Month != test.expectedMonth || result.Day != test.expectedDay {
 			t.Errorf("JalaliFull(%v) = %d-%02d-%02d, expected %d-%02d-%02d",
 				test.gregorianDate, result.Year, result.Month, result.Day,
 				test.expectedYear, test.expectedMonth, test.expectedDay)
 		}
 
-		jalaliDate := pd.Jalali(test.gregorianDate)
+		jalaliDate := pd.FromTime(test.gregorianDate)
 		if jalaliDate.Year != test.expectedYear || jalaliDate.Month != test.expectedMonth || jalaliDate.Day != test.expectedDay {
 			t.Errorf("Jalali(%v) = %d-%02d-%02d, expected %d-%02d-%02d",
 				test.gregorianDate, jalaliDate.Year, jalaliDate.Month, jalaliDate.Day,
@@ -44,7 +44,7 @@ func TestJalaliConversion(t *testing.T) {
 }
 
 func TestGregorianConversion(t *testing.T) {
-	pd := persiandate.NewPersianDate("YYYY/MM/DD")
+	pd := persiandate.New("YYYY/MM/DD")
 
 	tests := []struct {
 		jalaliYear    int
@@ -76,7 +76,7 @@ func TestGregorianConversion(t *testing.T) {
 }
 
 func TestLeapYears(t *testing.T) {
-	pd := persiandate.NewPersianDate("")
+	pd := persiandate.New("")
 
 	jalaliLeapYears := []int{1375, 1379, 1383, 1387, 1391, 1395, 1399, 1403}
 	jalaliNonLeapYears := []int{1376, 1377, 1378, 1380, 1381, 1382, 1384}
@@ -110,7 +110,7 @@ func TestLeapYears(t *testing.T) {
 }
 
 func TestMonthLength(t *testing.T) {
-	pd := persiandate.NewPersianDate("")
+	pd := persiandate.New("")
 
 	// Test Jalali month lengths
 	// First 6 months should have 31 days
@@ -185,34 +185,34 @@ func TestNumberConversion(t *testing.T) {
 }
 
 func TestDateArithmetic(t *testing.T) {
-	pd := persiandate.NewPersianDate("")
+	pd := persiandate.New("")
 
-	baseDate := pd.Jalali(time.Date(2023, 9, 6, 0, 0, 0, 0, time.UTC)) // 1402-06-15
+	baseDate := pd.FromTime(time.Date(2023, 9, 6, 0, 0, 0, 0, time.UTC)) // 1402-06-15
 	t.Logf("baseDate: %v", baseDate)
 	// Test adding days
-	addedDate := pd.AddDaysToJalali(baseDate, 10)
+	addedDate := pd.AddDaysTo(baseDate, 10)
 	if addedDate.Date.Year != 1402 || addedDate.Date.Month != 6 || addedDate.Date.Day != 25 {
 		t.Errorf("AddDaysToJalali(1402-06-15, 10) = %d-%02d-%02d, expected 1402-06-25",
 			addedDate.Date.Year, addedDate.Date.Month, addedDate.Date.Day)
 	}
 
 	// Test adding days crossing month boundary
-	addedDate = pd.AddDaysToJalali(baseDate, 20)
+	addedDate = pd.AddDaysTo(baseDate, 20)
 	if addedDate.Date.Year != 1402 || addedDate.Date.Month != 7 || addedDate.Date.Day != 4 {
 		t.Errorf("AddDaysToJalali(1402-06-15, 20) = %d-%02d-%02d, expected 1402-07-05",
 			addedDate.Date.Year, addedDate.Date.Month, addedDate.Date.Day)
 	}
 
 	// Test adding days crossing year boundary
-	yearEndDate := pd.Jalali(time.Date(2024, 3, 15, 0, 0, 0, 0, time.UTC)) // 1402-12-25
-	addedDate = pd.AddDaysToJalali(yearEndDate, 10)
+	yearEndDate := pd.FromTime(time.Date(2024, 3, 15, 0, 0, 0, 0, time.UTC)) // 1402-12-25
+	addedDate = pd.AddDaysTo(yearEndDate, 10)
 	if addedDate.Date.Year != 1403 || addedDate.Date.Month != 1 || addedDate.Date.Day != 6 {
 		t.Errorf("AddDaysToJalali(1402-12-25, 10) = %d-%02d-%02d, expected 1403-01-05",
 			addedDate.Date.Year, addedDate.Date.Month, addedDate.Date.Day)
 	}
 
 	// Test subtracting days
-	subtractedDate := pd.SubtractDaysFromJalali(baseDate, 10)
+	subtractedDate := pd.SubtractDaysFrom(baseDate, 10)
 	if subtractedDate.Date.Year != 1402 || subtractedDate.Date.Month != 6 || subtractedDate.Date.Day != 5 {
 		t.Errorf("SubtractDaysFromJalali(1402-06-15, 10) = %d-%02d-%02d, expected 1402-06-05",
 			subtractedDate.Date.Year, subtractedDate.Date.Month, subtractedDate.Date.Day)
@@ -223,17 +223,17 @@ func TestDateArithmetic(t *testing.T) {
 	t.Logf("startDate: %v", startDate)
 	endDate := persiandate.JalaliDate{Date: persiandate.Date{Year: 1402, Month: 7, Day: 1}} // 1402-07-01
 	t.Logf("endDate: %v", endDate)
-	daysBetween := pd.DifferenceJalali(startDate, endDate)
+	daysBetween := pd.Difference(startDate, endDate)
 	if daysBetween != 31 {
 		t.Errorf("DaysBetweenJalaliDates(1402-06-01, 1402-07-01) = %d, expected 30", daysBetween)
 	}
 }
 
 func TestDateParsing(t *testing.T) {
-	pd := persiandate.NewPersianDate("")
+	pd := persiandate.New("")
 
 	validDateStr := "1402-06-15"
-	date, err := pd.ParseJalaliDateString(validDateStr)
+	date, err := pd.Parse(validDateStr)
 	if err != nil {
 		t.Errorf("ParseJalaliDateString(%s) returned error: %v", validDateStr, err)
 	}
@@ -243,22 +243,22 @@ func TestDateParsing(t *testing.T) {
 	}
 
 	invalidDateStr := "1402-13-15" // Invalid month
-	_, err = pd.ParseJalaliDateString(invalidDateStr)
+	_, err = pd.Parse(invalidDateStr)
 	if err == nil {
 		t.Errorf("ParseJalaliDateString(%s) should return error for invalid date", invalidDateStr)
 	}
 
 	invalidFormatStr := "1402/06/15" // Wrong separator
-	_, err = pd.ParseJalaliDateString(invalidFormatStr)
+	_, err = pd.Parse(invalidFormatStr)
 	if err == nil {
 		t.Errorf("ParseJalaliDateString(%s) should return error for invalid format", invalidFormatStr)
 	}
 }
 
 func TestJalaliWeek(t *testing.T) {
-	pd := persiandate.NewPersianDate("")
+	pd := persiandate.New("")
 
-	jalaliWeek := pd.JalaliWeek(1404, 1, 9)
+	jalaliWeek := pd.Week(1404, 1, 9)
 	for key, week := range jalaliWeek {
 		if key == "saturday" {
 			if week.Date.Year != 1404 || week.Date.Month != 1 || week.Date.Day != 9 {
@@ -272,4 +272,55 @@ func TestJalaliWeek(t *testing.T) {
 		}
 		t.Logf("jalaliWeek: %v %v", key, week)
 	}
+}
+
+func TestYearDay(t *testing.T) {
+	pd := persiandate.Instance("")
+	d := pd.GetYearDay(pd.ToJalali(2025, 3, 29))
+	t.Logf("Day of persian year is: %d", d)
+
+	var yearDays int
+	if pd.IsLeapYearJalali(pd.ToJalali(2025, 3, 29).Year) {
+		yearDays = 366
+	} else {
+		yearDays = 365
+	}
+	percentage := float64(d) / float64(yearDays) * 100
+	t.Logf("Overall %f%%  days passed", percentage)
+}
+func TestWeekDay(t *testing.T) {
+	pd := persiandate.New("")
+	wd := pd.GetWeekDay(pd.Now())
+	formatted := pd.GetDayName(wd)
+	t.Logf("Current day of week is: %d, %s", wd, formatted)
+}
+
+func TestSince(t *testing.T) {
+	pd := persiandate.New("")
+	diff := pd.Since(pd.ToJalali(2025, 3, 29), pd.Now())
+	t.Logf("Total difference days since : %d", diff)
+	if diff != 0 {
+		t.Errorf("TestSince(2025,3,29) = %v, expected 0", diff)
+	}
+}
+
+func TestUntil(t *testing.T) {
+	pd := persiandate.New("")
+	remained := pd.Until(pd.Now(), pd.ToJalali(2025, 4, 29))
+
+	t.Logf("Total remained days until: %d", remained)
+	if remained != 31 {
+		t.Errorf("TestUntil(2025,4,29) = %v, expected 31", remained)
+	}
+}
+
+func TestFormatting(t *testing.T) {
+	ts := time.Now()
+	formatted := ts.Format("2006 Feb")
+
+	// pd := persiandate.New("YY/MM/dd HH:ii:ss a L ff mm rr")
+	pd := persiandate.New("c")
+	formatted = pd.Format(pd.Now(), false)
+	t.Logf(formatted)
+
 }
