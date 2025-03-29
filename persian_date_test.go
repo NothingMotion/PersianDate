@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	persiandate "github.com/NothingMotion/PersianDate-GO"
+	persiandate "github.com/NothingMotion/persian-date-converter-go"
 )
 
 func TestJalaliConversion(t *testing.T) {
