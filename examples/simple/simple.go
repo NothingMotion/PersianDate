@@ -39,4 +39,15 @@ func main() {
 	pd.Now().ToTime(pd.GetYear(), pd.GetMonth(), pd.GetDay(), 0, 0, 0, 0)
 
 	////////////////////////////////////////////
+
+	// Gets day index of week from 0 (Saturday) to 6 (Friday)
+	wd := pd.GetWeekDay()
+	// Gets name of the day
+	pd.GetDayName(wd)
+	////////////////////////////////////////////
+
+	// Gets day of year
+	pd.GetYearDay()
+
+	////////////////////////////////////////////
 }
