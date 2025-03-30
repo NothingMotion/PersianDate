@@ -55,9 +55,12 @@ func (g GregorianDateResponse) String() string {
 }
 
 type Date struct {
-	Year  int
-	Month int
-	Day   int
+	Year   int
+	Month  int
+	Day    int
+	Hour   int
+	Minute int
+	Second int
 }
 
 func (d Date) String() string {
@@ -507,6 +510,7 @@ func (p *PersianDate) Format(jDate JalaliDate, toPersian ...interface{}) string 
 
 	// Apply all replacements
 	for pattern, replacement := range replacements {
+
 		format = strings.ReplaceAll(format, pattern, replacement)
 	}
 
@@ -522,6 +526,11 @@ func (p *PersianDate) Add(jDate JalaliDate, days int) *PersianDate {
 	timeObject = timeObject.AddDate(0, 0, days)
 	return p.FromTime(timeObject)
 
+}
+func (p *PersianDate) AddDate(jDate JalaliDate, y, m, d int) *PersianDate {
+	timeObject := p.ToTime(jDate.Year, jDate.Month, jDate.Day, 0, 0, 0, 0)
+	timeObject = timeObject.AddDate(y, m, d)
+	return p.FromTime(timeObject)
 }
 
 // SubtractDaysFromJalali subtracts days from a Jalali date and returns the new date
@@ -594,6 +603,71 @@ func (p *PersianDate) Equal(a, b JalaliDate) bool {
 	return a.Year == b.Year && a.Month == b.Month && a.Day == b.Day
 }
 
+func (p *PersianDate) Sort(dates ...interface{}) []JalaliDate {
+	var jalaliDates []JalaliDate
+
+	// Process each date in the input
+	for _, date := range dates {
+		switch d := date.(type) {
+		case JalaliDate:
+			jalaliDates = append(jalaliDates, d)
+		case Date:
+			jalaliDates = append(jalaliDates, JalaliDate{Date: d})
+		case string:
+			parsed, err := p.Parse(d)
+			if err == nil {
+				jalaliDates = append(jalaliDates, parsed)
+			}
+		case time.Time:
+			response := p.FromTimeFull(d)
+			jalaliDate := JalaliDate{
+				Date: Date{
+					Year:   response.Year,
+					Month:  response.Month,
+					Day:    response.Day,
+					Hour:   response.Hour,
+					Minute: response.Minute,
+					Second: response.Second,
+				},
+			}
+			jalaliDates = append(jalaliDates, jalaliDate)
+		}
+	}
+
+	// Sort the dates by converting to Julian days
+	for i := 0; i < len(jalaliDates); i++ {
+		for j := i + 1; j < len(jalaliDates); j++ {
+			jdni := p.jalaliToJulianDay(jalaliDates[i].Year, jalaliDates[i].Month, jalaliDates[i].Day)
+			jdnj := p.jalaliToJulianDay(jalaliDates[j].Year, jalaliDates[j].Month, jalaliDates[j].Day)
+
+			if jdni > jdnj {
+				jalaliDates[i], jalaliDates[j] = jalaliDates[j], jalaliDates[i]
+			}
+		}
+	}
+
+	return jalaliDates
+}
+
+func (p *PersianDate) Filter(comparator func(JalaliDate) bool, dates ...interface{}) []JalaliDate {
+	if len(dates) < 1 {
+		return []JalaliDate{}
+	}
+
+	// Sort the dates
+	sortedDates := p.Sort(dates...)
+
+	// Filter the dates based on the comparator function
+	var filteredDates []JalaliDate
+	for _, date := range sortedDates {
+		if comparator(date) {
+			filteredDates = append(filteredDates, date)
+		}
+	}
+
+	return filteredDates
+}
+
 func (p *PersianDate) GetWeekDay() int {
 	jDate := p.currentDate
 	t := p.ToTime(jDate.Year, jDate.Month, jDate.Day, 0, 0, 0, 0)
@@ -643,15 +717,15 @@ func (p *PersianDate) GetDay() int {
 }
 
 func (p *PersianDate) GetHour() int {
-	return p.NowFull().Hour
+	return p.Date().Hour
 }
 
 func (p *PersianDate) GetMinute() int {
-	return p.NowFull().Minute
+	return p.Date().Minute
 }
 
 func (p *PersianDate) GetSecond() int {
-	return p.NowFull().Second
+	return p.Date().Second
 }
 
 func (p *PersianDate) Clock() (int, int, int) {
