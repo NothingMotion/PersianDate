@@ -583,6 +583,90 @@ func (p *PersianDate) Sub(jDate JalaliDate, days int) *PersianDate {
 	return p
 }
 
+// Returns oldest date between dates
+func (p *PersianDate) Min(dates ...interface{}) JalaliDate {
+	// Handle a slice passed as single argument
+	if len(dates) == 1 {
+		switch d := dates[0].(type) {
+		case []JalaliDate:
+			return p.processMinMax(d, true)
+		case []interface{}:
+			// Convert to sorted dates and return min
+			sortedDates := p.Sort(d...)
+			if len(sortedDates) > 0 {
+				return sortedDates[0]
+			}
+			return JalaliDate{}
+		}
+	}
+
+	// Process regular variadic arguments
+	sortedDates := p.Sort(dates...)
+	if len(sortedDates) < 1 {
+		return JalaliDate{}
+	}
+	return sortedDates[0]
+}
+
+// Return newest date between dates
+func (p *PersianDate) Max(dates ...interface{}) JalaliDate {
+	// Handle a slice passed as single argument
+	if len(dates) == 1 {
+		switch d := dates[0].(type) {
+		case []JalaliDate:
+			return p.processMinMax(d, false)
+		case []interface{}:
+			// Convert to sorted dates and return max
+			sortedDates := p.Sort(d...)
+			if len(sortedDates) > 0 {
+				return sortedDates[len(sortedDates)-1]
+			}
+			return JalaliDate{}
+		}
+	}
+
+	// Process regular variadic arguments
+	sortedDates := p.Sort(dates...)
+	if len(sortedDates) < 1 {
+		return JalaliDate{}
+	}
+	return sortedDates[len(sortedDates)-1]
+}
+
+// Helper function to process min/max from a slice of JalaliDate
+func (p *PersianDate) processMinMax(dates []JalaliDate, isMin bool) JalaliDate {
+	if len(dates) == 0 {
+		return JalaliDate{}
+	}
+
+	if len(dates) == 1 {
+		return dates[0]
+	}
+
+	index := 0
+	if !isMin {
+		index = len(dates) - 1
+	}
+
+	// Sort by date
+	sortedDates := make([]JalaliDate, len(dates))
+	copy(sortedDates, dates)
+
+	// Sort the dates by converting to Julian days
+	for i := 0; i < len(sortedDates); i++ {
+		for j := i + 1; j < len(sortedDates); j++ {
+			jdni := p.jalaliToJulianDay(sortedDates[i].Year, sortedDates[i].Month, sortedDates[i].Day)
+			jdnj := p.jalaliToJulianDay(sortedDates[j].Year, sortedDates[j].Month, sortedDates[j].Day)
+
+			if jdni > jdnj {
+				sortedDates[i], sortedDates[j] = sortedDates[j], sortedDates[i]
+			}
+		}
+	}
+
+	return sortedDates[index]
+}
+
 // ParseJalaliDateString parses a string in format YYYY-MM-DD to a Jalali date
 func (p *PersianDate) Parse(dateStr string) (JalaliDate, error) {
 	parts := strings.Split(dateStr, "-")
@@ -648,6 +732,10 @@ func (p *PersianDate) Equal(a, b JalaliDate) bool {
 }
 
 func (p *PersianDate) Sort(dates ...interface{}) []JalaliDate {
+	if len(dates) < 1 {
+		fmt.Println("dates to sort are less than 1")
+		return []JalaliDate{}
+	}
 	var jalaliDates []JalaliDate
 
 	// Process each date in the input
