@@ -428,7 +428,10 @@ func (p *PersianDate) ToTime(jy, jm, jd, h, m, s, ms int) time.Time {
 func (p *PersianDate) Format(jDate JalaliDate, toPersian ...interface{}) string {
 	format := p.FORMAT
 
-	t := p.ToTime(jDate.Year, jDate.Month, jDate.Day, 0, 0, 0, 0)
+	// Use the time components directly from JalaliDate
+	hour := jDate.Hour
+	minute := jDate.Minute
+	second := jDate.Second
 
 	var convertNumbers bool
 
@@ -443,7 +446,7 @@ func (p *PersianDate) Format(jDate JalaliDate, toPersian ...interface{}) string 
 
 	// AM/PM values
 	var shortAMPM, longAMPM string
-	if t.Hour() < 12 {
+	if hour < 12 {
 		shortAMPM = "ق.ظ"
 		longAMPM = "قبل از ظهر"
 	} else {
@@ -459,11 +462,18 @@ func (p *PersianDate) Format(jDate JalaliDate, toPersian ...interface{}) string 
 		leapYearText = "خیر"
 	}
 
+	// Year formatting options
+	yearStr := fmt.Sprintf("%d", jDate.Year)
+	yearLen := len(yearStr)
+
 	// Create a map of replacements for better performance
 	replacements := map[string]string{
-		// Year formats
-		"YYYY": fmt.Sprintf("%04d", jDate.Year),     // Full year (4 digits)
-		"YY":   fmt.Sprintf("%02d", jDate.Year%100), // Short year (2 digits)
+		// Year formats - enhanced
+		"YYYY": fmt.Sprintf("%04d", jDate.Year),     // Full year with leading zeros (4 digits)
+		"YYY":  yearStr[max(0, yearLen-3):],         // 3-digit year
+		"YY":   fmt.Sprintf("%02d", jDate.Year%100), // 2-digit year with leading zero
+		"Y":    fmt.Sprintf("%d", jDate.Year%100),   // 2-digit year without leading zero
+		"y":    yearStr,                             // Full year without padding
 
 		// Month formats
 		"MM": fmt.Sprintf("%02d", jDate.Month), // Month number with leading zero
@@ -473,9 +483,11 @@ func (p *PersianDate) Format(jDate JalaliDate, toPersian ...interface{}) string 
 		"mb": p.GetMonthSymbol(jDate.Month),    // Month symbol
 
 		// Day formats
-		"dd": fmt.Sprintf("%02d", jDate.Day), // Day with leading zero
-		"d":  fmt.Sprintf("%d", jDate.Day),   // Day without leading zero
-		"rr": PersianMonthDays[jDate.Day-1],  // Day in Persian words
+		"DD": fmt.Sprintf("%02d", jDate.Day),                              // Day with leading zero
+		"D":  fmt.Sprintf("%d", jDate.Day),                                // Day without leading zero
+		"dd": fmt.Sprintf("%02d", jDate.Day),                              // Alternative day with leading zero (for compatibility)
+		"d":  fmt.Sprintf("%d", jDate.Day),                                // Alternative day without leading zero (for compatibility)
+		"rr": PersianMonthDays[min(jDate.Day-1, len(PersianMonthDays)-1)], // Day in Persian words (with bounds check)
 
 		// Weekday formats
 		"l":  p.GetDayName(p.GetWeekDay()),      // Full day name
@@ -483,14 +495,14 @@ func (p *PersianDate) Format(jDate JalaliDate, toPersian ...interface{}) string 
 		"kh": p.GetShortDayName(p.GetWeekDay()), // Short day name
 
 		// Time formats
-		"HH": fmt.Sprintf("%02d", t.Hour()),    // 24-hour with leading zero
-		"H":  fmt.Sprintf("%d", t.Hour()),      // 24-hour without leading zero
-		"hh": fmt.Sprintf("%02d", t.Hour()%12), // 12-hour with leading zero
-		"h":  fmt.Sprintf("%d", t.Hour()%12),   // 12-hour without leading zero
-		"ii": fmt.Sprintf("%02d", t.Minute()),  // Minutes with leading zero
-		"i":  fmt.Sprintf("%d", t.Minute()),    // Minutes without leading zero
-		"ss": fmt.Sprintf("%02d", t.Second()),  // Seconds with leading zero
-		"s":  fmt.Sprintf("%d", t.Second()),    // Seconds without leading zero
+		"HH": fmt.Sprintf("%02d", hour),           // 24-hour with leading zero
+		"H":  fmt.Sprintf("%d", hour),             // 24-hour without leading zero
+		"hh": fmt.Sprintf("%02d", hourTo12(hour)), // 12-hour with leading zero
+		"h":  fmt.Sprintf("%d", hourTo12(hour)),   // 12-hour without leading zero
+		"ii": fmt.Sprintf("%02d", minute),         // Minutes with leading zero
+		"i":  fmt.Sprintf("%d", minute),           // Minutes without leading zero
+		"ss": fmt.Sprintf("%02d", second),         // Seconds with leading zero
+		"s":  fmt.Sprintf("%d", second),           // Seconds without leading zero
 
 		// AM/PM
 		"a": shortAMPM, // Persian AM/PM abbreviated
@@ -505,19 +517,51 @@ func (p *PersianDate) Format(jDate JalaliDate, toPersian ...interface{}) string 
 	// Full date-time format in Persian style
 	replacements["c"] = fmt.Sprintf("%d/%d/%d ،%d:%d:%d %s",
 		jDate.Year, jDate.Month, jDate.Day,
-		t.Hour(), t.Minute(), t.Second(),
+		hour, minute, second,
 		p.GetDayName(p.GetWeekDay()))
 
-	// Apply all replacements
-	for pattern, replacement := range replacements {
+	// Apply all replacements (using a custom sort to avoid partial replacements)
+	orderedPatterns := []string{"YYYY", "YYY", "YY", "Y", "y", "MM", "M", "mm", "km", "mb",
+		"DD", "D", "dd", "d", "rr", "l", "rh", "kh", "HH", "H", "hh", "h", "ii", "i", "ss", "s",
+		"a", "A", "L", "b", "ff", "c"}
 
-		format = strings.ReplaceAll(format, pattern, replacement)
+	for _, pattern := range orderedPatterns {
+		if replacement, exists := replacements[pattern]; exists {
+			format = strings.ReplaceAll(format, pattern, replacement)
+		}
 	}
 
 	if convertNumbers {
 		format = ToPersianNumbers(format)
 	}
 	return format
+}
+
+// Helper function to convert 24-hour format to 12-hour format
+func hourTo12(hour int) int {
+	if hour == 0 {
+		return 12
+	}
+	if hour > 12 {
+		return hour - 12
+	}
+	return hour
+}
+
+// Helper function to return the minimum of two integers
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// Helper function to return the maximum of two integers
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 // AddDaysToJalali adds days to a Jalali date and returns the new date
