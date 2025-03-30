@@ -329,3 +329,52 @@ func TestFormatting(t *testing.T) {
 	t.Logf(formatted)
 
 }
+
+func TestNewDate(t *testing.T) {
+	pd := persiandate.New("YYYY/MM/DD")
+	pd2 := pd.ToJalali(2025, 3, 29)
+
+	start := pd.Date()
+	days := pd.Until(pd.ToJalali(2025, 3, 30).Date(), start)
+
+	t.Logf("remaining days: %d", days)
+
+	if pd != pd2 {
+		t.Errorf("TestNewDate() Not the same date")
+	}
+	t.Logf("pd: %v", pd.Date())
+	t.Logf("pd2: %v", pd2.Date())
+}
+
+func TestDateInstance(t *testing.T) {
+	pd := persiandate.Instance("YY/MM/dd")
+	formatted := pd.ToJalali(2025, 3, 29).Add(pd.Date(), 1).Format(pd.Date())
+	t.Logf(formatted)
+}
+func TestDateArthematic(t *testing.T) {
+
+	pd := persiandate.New("YYYY/MM/DD")
+	target := pd.ToJalali(2025, 4, 29).Date()
+
+	diff := pd.
+		ToJalali(2025, 3, 29).
+		Add(pd.Date(), 1).
+		Sub(pd.Date(), 1).
+		Difference(pd.Date(), target)
+	if diff != 31 {
+		t.Errorf("expected 31 got %v", diff)
+	}
+
+	start := pd.ToJalali(2025, 3, 29).Date()
+	end := pd.ToJalali(2025, 4, 29).Date()
+
+	// Format the dates for debugging purposes if needed
+	_ = pd.Format(start)
+	_ = pd.Format(end)
+
+	diff2 := pd.Difference(start, end)
+	if diff2 != 31 {
+		t.Errorf("expected 31 got %v", diff2)
+	}
+
+}
