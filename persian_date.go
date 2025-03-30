@@ -20,8 +20,8 @@ type PersianDate struct {
 	persianShortDays   []string
 	persianSeasons     []string
 
-	currentDate     JalaliDate
-	currentDateFull PersianDateResponse
+	currentDate JalaliDate
+	targetDate  JalaliDate
 }
 
 type DateResponse struct {
@@ -367,9 +367,12 @@ func ToLatinNumbers(text string) string {
 }
 
 // ToJalali converts a Gregorian date to Jalali
-func (p *PersianDate) ToJalali(gy, gm, gd int) JalaliDate {
+func (p *PersianDate) ToJalali(gy, gm, gd int) *PersianDate {
+
+	p.currentDate = p.julianDayToJalali(p.gregorianToJulianDay(gy, gm, gd))
 	// If gy is a time.Time object, extract the date components
-	return p.julianDayToJalali(p.gregorianToJulianDay(gy, gm, gd))
+
+	return p
 }
 
 // ToGregorian converts a Jalali date to Gregorian
@@ -378,9 +381,10 @@ func (p *PersianDate) ToGregorian(jy, jm, jd int) GregorianDate {
 }
 
 // JalaliWeek returns Saturday and Friday day of current week (week starts on Saturday)
-func (p *PersianDate) Week(jy, jm, jd int) map[string]JalaliDate {
+func (p *PersianDate) WeekYear(jy, jm, jd int) map[string]JalaliDate {
 	// Get day of week (0 = Saturday, 6 = Friday) based on jalali date
-	dayOfWeek := p.GetWeekDay(JalaliDate{Date{Year: jy, Month: jm, Day: jd}})
+	p.currentDate = JalaliDate{Date{Year: jy, Month: jm, Day: jd}}
+	dayOfWeek := p.GetWeekDay()
 
 	// Calculate difference to Saturday (start of week in Jalali calendar)
 	// If it's Saturday (0), difference is 0
@@ -426,87 +430,85 @@ func (p *PersianDate) Format(jDate JalaliDate, toPersian ...interface{}) string 
 	var convertNumbers bool
 
 	if len(toPersian) != 0 {
-
 		switch toPersian[0].(type) {
-
 		case bool:
 			if toPersian[0] == true {
-
 				convertNumbers = true
 			}
 		}
 	}
-	var aText string
-	var AText string
-	var kabisehText string
 
+	// AM/PM values
+	var shortAMPM, longAMPM string
 	if t.Hour() < 12 {
-		aText = "ق.ظ"
-		AText = "قبل از ظهر"
+		shortAMPM = "ق.ظ"
+		longAMPM = "قبل از ظهر"
 	} else {
-		aText = "ب.ظ"
-		AText = "بعد از ظهر"
+		shortAMPM = "ب.ظ"
+		longAMPM = "بعد از ظهر"
 	}
 
+	// Leap year text
+	var leapYearText string
 	if p.IsLeapYearJalali(jDate.Year) {
-		kabisehText = "بله"
+		leapYearText = "بله"
 	} else {
-		kabisehText = "خیر"
+		leapYearText = "خیر"
 	}
 
-	// Replace year
-	// format = strings.ReplaceAll(format, "YY", fmt.Sprintf("%02d", jDate.Year))
-	format = strings.ReplaceAll(format, "YYYY", fmt.Sprintf("%04d", jDate.Year))
+	// Create a map of replacements for better performance
+	replacements := map[string]string{
+		// Year formats
+		"YYYY": fmt.Sprintf("%04d", jDate.Year),     // Full year (4 digits)
+		"YY":   fmt.Sprintf("%02d", jDate.Year%100), // Short year (2 digits)
 
-	// Replace Month
-	format = strings.ReplaceAll(format, "MM", fmt.Sprintf("%02d", jDate.Month))
+		// Month formats
+		"MM": fmt.Sprintf("%02d", jDate.Month), // Month number with leading zero
+		"M":  fmt.Sprintf("%d", jDate.Month),   // Month number without leading zero
+		"mm": p.GetMonthName(jDate.Month),      // Full month name
+		"km": p.GetShortMonthName(jDate.Month), // Short month name
+		"mb": p.GetMonthSymbol(jDate.Month),    // Month symbol
 
-	// Replace day
-	format = strings.ReplaceAll(format, "dd", fmt.Sprintf("%02d", jDate.Day))
+		// Day formats
+		"dd": fmt.Sprintf("%02d", jDate.Day), // Day with leading zero
+		"d":  fmt.Sprintf("%d", jDate.Day),   // Day without leading zero
+		"rr": PersianMonthDays[jDate.Day-1],  // Day in Persian words
 
-	// Replace hour
-	format = strings.ReplaceAll(format, "HH", fmt.Sprintf("%02d", t.Hour()))
+		// Weekday formats
+		"l":  p.GetDayName(p.GetWeekDay()),      // Full day name
+		"rh": p.GetDayName(p.GetWeekDay()),      // Full day name (alias)
+		"kh": p.GetShortDayName(p.GetWeekDay()), // Short day name
 
-	// Replace minute
-	format = strings.ReplaceAll(format, "ii", fmt.Sprintf("%02d", t.Minute()))
+		// Time formats
+		"HH": fmt.Sprintf("%02d", t.Hour()),    // 24-hour with leading zero
+		"H":  fmt.Sprintf("%d", t.Hour()),      // 24-hour without leading zero
+		"hh": fmt.Sprintf("%02d", t.Hour()%12), // 12-hour with leading zero
+		"h":  fmt.Sprintf("%d", t.Hour()%12),   // 12-hour without leading zero
+		"ii": fmt.Sprintf("%02d", t.Minute()),  // Minutes with leading zero
+		"i":  fmt.Sprintf("%d", t.Minute()),    // Minutes without leading zero
+		"ss": fmt.Sprintf("%02d", t.Second()),  // Seconds with leading zero
+		"s":  fmt.Sprintf("%d", t.Second()),    // Seconds without leading zero
 
-	// Replace seconds
-	format = strings.ReplaceAll(format, "ss", fmt.Sprintf("%02d", t.Second()))
+		// AM/PM
+		"a": shortAMPM, // Persian AM/PM abbreviated
+		"A": longAMPM,  // Persian AM/PM full
 
-	// Replace a.m. or p.m.
-	format = strings.ReplaceAll(format, "a", aText)
-	format = strings.ReplaceAll(format, "A", AText)
+		// Other formats
+		"L":  leapYearText,                                                // Is leap year
+		"b":  fmt.Sprintf("%d", int(float64(jDate.Month)/float64(3.1)+1)), // Season number
+		"ff": p.GetSeason(jDate.Month),                                    // Season name
+	}
 
-	// Replace date
-	format = strings.ReplaceAll(format, "c", fmt.Sprintf("%d/%d/%d ،%d:%d:%d %s", jDate.Year, jDate.Month, jDate.Day, t.Hour(), t.Minute(), t.Second(), p.GetDayName(p.GetWeekDay(jDate))))
+	// Full date-time format in Persian style
+	replacements["c"] = fmt.Sprintf("%d/%d/%d ،%d:%d:%d %s",
+		jDate.Year, jDate.Month, jDate.Day,
+		t.Hour(), t.Minute(), t.Second(),
+		p.GetDayName(p.GetWeekDay()))
 
-	// Replace kabiseh
-	format = strings.ReplaceAll(format, "L", kabisehText)
-
-	// Replace season number
-	format = strings.ReplaceAll(format, "b", fmt.Sprintf("%d", int(float64(jDate.Month)/float64(3.1)+1)))
-
-	// Replace season
-	format = strings.ReplaceAll(format, "ff", p.GetSeason(jDate.Month))
-
-	// Replace month
-	format = strings.ReplaceAll(format, "mm", p.GetMonthName(jDate.Month))
-
-	// Replace month short
-	format = strings.ReplaceAll(format, "km", p.GetShortMonthName(jDate.Month))
-
-	// Replace month symbol
-	format = strings.ReplaceAll(format, "mb", p.GetMonthSymbol(jDate.Month))
-
-	// Replace day number
-	format = strings.ReplaceAll(format, "rh", p.GetDayName(p.GetWeekDay(jDate)))
-	format = strings.ReplaceAll(format, "l", p.GetDayName(p.GetWeekDay(jDate)))
-
-	// Replace day short
-	format = strings.ReplaceAll(format, "kh", p.GetShortDayName(p.GetWeekDay(jDate)))
-
-	// Replace day of month
-	format = strings.ReplaceAll(format, "rr", PersianMonthDays[jDate.Day-1])
+	// Apply all replacements
+	for pattern, replacement := range replacements {
+		format = strings.ReplaceAll(format, pattern, replacement)
+	}
 
 	if convertNumbers {
 		format = ToPersianNumbers(format)
@@ -515,7 +517,7 @@ func (p *PersianDate) Format(jDate JalaliDate, toPersian ...interface{}) string 
 }
 
 // AddDaysToJalali adds days to a Jalali date and returns the new date
-func (p *PersianDate) AddDaysTo(jDate JalaliDate, days int) *PersianDate {
+func (p *PersianDate) Add(jDate JalaliDate, days int) *PersianDate {
 	timeObject := p.ToTime(jDate.Year, jDate.Month, jDate.Day, 0, 0, 0, 0)
 	timeObject = timeObject.AddDate(0, 0, days)
 	return p.FromTime(timeObject)
@@ -523,8 +525,8 @@ func (p *PersianDate) AddDaysTo(jDate JalaliDate, days int) *PersianDate {
 }
 
 // SubtractDaysFromJalali subtracts days from a Jalali date and returns the new date
-func (p *PersianDate) SubtractDaysFrom(jDate JalaliDate, days int) *PersianDate {
-	p.AddDaysTo(jDate, -days)
+func (p *PersianDate) Sub(jDate JalaliDate, days int) *PersianDate {
+	p.Add(jDate, -days)
 	return p
 }
 
@@ -563,21 +565,42 @@ func (p *PersianDate) Difference(start, end JalaliDate) int {
 	endJDN := p.jalaliToJulianDay(end.Year, end.Month, end.Day)
 	return endJDN - startJDN
 }
-func (p *PersianDate) Until(date, end JalaliDate) int {
-	return p.Difference(date, end)
+
+// Until calculates days until the end date
+// If no date is provided, it uses the current date as the start date
+func (p *PersianDate) Until(end JalaliDate, startOpt ...JalaliDate) int {
+	var start JalaliDate
+	if len(startOpt) > 0 {
+		start = startOpt[0]
+	} else {
+		start = p.currentDate
+	}
+	return p.Difference(start, end)
 }
-func (p *PersianDate) Since(start, date JalaliDate) int {
-	return p.Difference(start, date)
+
+// Since calculates days since the start date
+// If no date is provided, it uses the current date as the end date
+func (p *PersianDate) Since(start JalaliDate, endOpt ...JalaliDate) int {
+	var end JalaliDate
+	if len(endOpt) > 0 {
+		end = endOpt[0]
+	} else {
+		end = p.currentDate
+	}
+	return p.Difference(start, end)
 }
+
 func (p *PersianDate) Equal(a, b JalaliDate) bool {
 	return a.Year == b.Year && a.Month == b.Month && a.Day == b.Day
 }
 
-func (p *PersianDate) GetWeekDay(jDate JalaliDate) int {
+func (p *PersianDate) GetWeekDay() int {
+	jDate := p.currentDate
 	t := p.ToTime(jDate.Year, jDate.Month, jDate.Day, 0, 0, 0, 0)
 	return int((t.Weekday() + 1) % 7) // conversion to jalali days (saturday from 6 to 0 , and friday to 6)
 }
-func (p *PersianDate) GetYearDay(jDate JalaliDate) int {
+func (p *PersianDate) GetYearDay() int {
+	jDate := p.currentDate
 	year := jDate.Year
 	month := int(jDate.Month)
 	day := jDate.Day
@@ -606,17 +629,17 @@ func (p *PersianDate) GetYearDay(jDate JalaliDate) int {
 }
 func (p *PersianDate) GetYear() int {
 
-	return p.Now().Date().Year
+	return p.Date().Year
 }
 
 func (p *PersianDate) GetMonth() int {
 
-	return p.Now().Date().Month
+	return p.Date().Month
 }
 
 func (p *PersianDate) GetDay() int {
 
-	return p.Now().Date().Day
+	return p.Date().Day
 }
 
 func (p *PersianDate) GetHour() int {
@@ -636,6 +659,7 @@ func (p *PersianDate) Clock() (int, int, int) {
 	return p.GetHour(), p.GetMinute(), p.GetSecond()
 }
 func (p *PersianDate) Date() JalaliDate {
+
 	return p.currentDate
 }
 

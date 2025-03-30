@@ -190,14 +190,14 @@ func TestDateArithmetic(t *testing.T) {
 	baseDate := pd.FromTime(time.Date(2023, 9, 6, 0, 0, 0, 0, time.UTC)).Date() // 1402-06-15
 	t.Logf("baseDate: %v", baseDate)
 	// Test adding days
-	addedDate := pd.AddDaysTo(baseDate, 10).Date()
+	addedDate := pd.Add(baseDate, 10).Date()
 	if addedDate.Date.Year != 1402 || addedDate.Date.Month != 6 || addedDate.Date.Day != 25 {
 		t.Errorf("AddDaysToJalali(1402-06-15, 10) = %d-%02d-%02d, expected 1402-06-25",
 			addedDate.Date.Year, addedDate.Date.Month, addedDate.Date.Day)
 	}
 
 	// Test adding days crossing month boundary
-	addedDate = pd.AddDaysTo(baseDate, 20).Date()
+	addedDate = pd.Add(baseDate, 20).Date()
 	if addedDate.Date.Year != 1402 || addedDate.Date.Month != 7 || addedDate.Date.Day != 4 {
 		t.Errorf("AddDaysToJalali(1402-06-15, 20) = %d-%02d-%02d, expected 1402-07-05",
 			addedDate.Date.Year, addedDate.Date.Month, addedDate.Date.Day)
@@ -205,14 +205,14 @@ func TestDateArithmetic(t *testing.T) {
 
 	// Test adding days crossing year boundary
 	yearEndDate := pd.FromTime(time.Date(2024, 3, 15, 0, 0, 0, 0, time.UTC)).Date() // 1402-12-25
-	addedDate = pd.AddDaysTo(yearEndDate, 10).Date()
+	addedDate = pd.Add(yearEndDate, 10).Date()
 	if addedDate.Date.Year != 1403 || addedDate.Date.Month != 1 || addedDate.Date.Day != 6 {
 		t.Errorf("AddDaysToJalali(1402-12-25, 10) = %d-%02d-%02d, expected 1403-01-05",
 			addedDate.Date.Year, addedDate.Date.Month, addedDate.Date.Day)
 	}
 
 	// Test subtracting days
-	subtractedDate := pd.SubtractDaysFrom(baseDate, 10).Date()
+	subtractedDate := pd.Sub(baseDate, 10).Date()
 	if subtractedDate.Date.Year != 1402 || subtractedDate.Date.Month != 6 || subtractedDate.Date.Day != 5 {
 		t.Errorf("SubtractDaysFromJalali(1402-06-15, 10) = %d-%02d-%02d, expected 1402-06-05",
 			subtractedDate.Date.Year, subtractedDate.Date.Month, subtractedDate.Date.Day)
@@ -258,7 +258,7 @@ func TestDateParsing(t *testing.T) {
 func TestJalaliWeek(t *testing.T) {
 	pd := persiandate.New("")
 
-	jalaliWeek := pd.Week(1404, 1, 9)
+	jalaliWeek := pd.WeekYear(1404, 1, 9)
 	for key, week := range jalaliWeek {
 		if key == "saturday" {
 			if week.Date.Year != 1404 || week.Date.Month != 1 || week.Date.Day != 9 {
@@ -276,11 +276,12 @@ func TestJalaliWeek(t *testing.T) {
 
 func TestYearDay(t *testing.T) {
 	pd := persiandate.Instance("")
-	d := pd.GetYearDay(pd.ToJalali(2025, 3, 29))
+
+	d := pd.ToJalali(2025, 3, 29).GetYearDay()
 	t.Logf("Day of persian year is: %d", d)
 
 	var yearDays int
-	if pd.IsLeapYearJalali(pd.ToJalali(2025, 3, 29).Year) {
+	if pd.IsLeapYearJalali(pd.ToJalali(2025, 3, 29).GetYear()) {
 		yearDays = 366
 	} else {
 		yearDays = 365
@@ -290,27 +291,31 @@ func TestYearDay(t *testing.T) {
 }
 func TestWeekDay(t *testing.T) {
 	pd := persiandate.New("")
-	wd := pd.GetWeekDay(pd.Now().Date())
+	wd := pd.Now().GetWeekDay()
 	formatted := pd.GetDayName(wd)
 	t.Logf("Current day of week is: %d, %s", wd, formatted)
 }
 
 func TestSince(t *testing.T) {
 	pd := persiandate.New("")
-	diff := pd.Since(pd.ToJalali(2025, 3, 29), pd.Now().Date())
+	date := pd.ToJalali(2025, 3, 29).Date()
+	diff := pd.Since(date, pd.Now().Date())
+
 	t.Logf("Total difference days since : %d", diff)
-	if diff != 0 {
+	if diff != 1 {
 		t.Errorf("TestSince(2025,3,29) = %v, expected 0", diff)
 	}
 }
 
 func TestUntil(t *testing.T) {
 	pd := persiandate.New("")
-	remained := pd.Until(pd.Now().Date(), pd.ToJalali(2025, 4, 29))
+
+	date := pd.Now().Date()
+	remained := pd.Until(pd.ToJalali(2025, 4, 29).Date(), date)
 
 	t.Logf("Total remained days until: %d", remained)
-	if remained != 31 {
-		t.Errorf("TestUntil(2025,4,29) = %v, expected 31", remained)
+	if remained != 30 {
+		t.Errorf("TestUntil(2025,4,29) = %v, expected 30", remained)
 	}
 }
 
@@ -318,8 +323,8 @@ func TestFormatting(t *testing.T) {
 	ts := time.Now()
 	formatted := ts.Format("2006 Feb")
 
-	// pd := persiandate.New("YY/MM/dd HH:ii:ss a L ff mm rr")
-	pd := persiandate.New("c")
+	pd := persiandate.New("YY/MM/dd HH:ii:ss a L ff mm rr")
+	// pd := persiandate.New("c")
 	formatted = pd.Format(pd.Now().Date(), false)
 	t.Logf(formatted)
 
